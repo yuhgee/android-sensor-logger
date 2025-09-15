@@ -5,12 +5,13 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -18,6 +19,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // フォアグラウンドサービスを起動
         val intent = Intent(this, SensorService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
@@ -41,7 +43,9 @@ fun SensorLoggerApp() {
     var light by remember { mutableStateOf(FloatArray(1)) }
     var gps by remember { mutableStateOf(GpsData(0.0, 0.0, 0f)) }
     var gnss by remember { mutableStateOf(GnssData(0, 0, emptyList())) }
+    var isRunning by remember { mutableStateOf(false) }
 
+    // 定期更新（UI用サンプル）
     LaunchedEffect(Unit) {
         while (true) {
             scope.launch {
@@ -67,5 +71,36 @@ fun SensorLoggerApp() {
         Text("GPS: Lat=${gps.latitude}, Lon=${gps.longitude}, Accuracy=${gps.accuracy}m")
         Text("GNSS: Satellites=${gnss.satelliteCount}, UsedInFix=${gnss.usedInFixCount}")
         Text("SNR: ${gnss.snrList.joinToString()}")
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                if (!isRunning) {
+                    startSensorsSafe(scope)
+                    isRunning = true
+                } else {
+                    stopSensorsSafe(scope)
+                    isRunning = false
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(if (isRunning) "Stop Sensors" else "Start Sensors")
+        }
+    }
+}
+
+// ワーカースレッドでセンサー開始
+fun startSensorsSafe(scope: CoroutineScope) {
+    scope.launch(Dispatchers.Default) {
+        SensorServiceManager.startSensors()
+    }
+}
+
+// ワーカースレッドでセンサー停止
+fun stopSensorsSafe(scope: CoroutineScope) {
+    scope.launch(Dispatchers.Default) {
+        SensorServiceManager.stopSensors()
     }
 }
