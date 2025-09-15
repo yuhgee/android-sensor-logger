@@ -3,7 +3,6 @@ package com.example.sensorlogger
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -35,10 +34,13 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun SensorLoggerApp() {
     val scope = rememberCoroutineScope()
+
     var accelerometer by remember { mutableStateOf(FloatArray(3)) }
     var gyroscope by remember { mutableStateOf(FloatArray(3)) }
     var magnetometer by remember { mutableStateOf(FloatArray(3)) }
     var light by remember { mutableStateOf(FloatArray(1)) }
+    var gps by remember { mutableStateOf(GpsData(0.0, 0.0, 0f)) }
+    var gnss by remember { mutableStateOf(GnssData(0, 0, emptyList())) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -47,6 +49,8 @@ fun SensorLoggerApp() {
                 gyroscope = SensorRepository.getGyroscope()
                 magnetometer = SensorRepository.getMagnetometer()
                 light = SensorRepository.getLight()
+                gps = SensorRepository.getGps()
+                gnss = SensorRepository.getGnss()
             }
             kotlinx.coroutines.delay(500)
         }
@@ -57,5 +61,11 @@ fun SensorLoggerApp() {
         Text("Gyroscope: ${gyroscope.joinToString()}")
         Text("Magnetometer: ${magnetometer.joinToString()}")
         Text("Light: ${light.joinToString()}")
+
+        Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+        Text("GPS: Lat=${gps.latitude}, Lon=${gps.longitude}, Accuracy=${gps.accuracy}m")
+        Text("GNSS: Satellites=${gnss.satelliteCount}, UsedInFix=${gnss.usedInFixCount}")
+        Text("SNR: ${gnss.snrList.joinToString()}")
     }
 }
